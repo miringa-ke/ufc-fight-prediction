@@ -1,0 +1,152 @@
+{
+  "name": "UFC Predictor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ufc-prediction",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b23d30c3-f1dc-4712-9200-d94ae678bb85",
+      "name": "Webhook",
+      "webhookId": "23fb3fd1-1abc-4931-a426-89112cc9f025"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract input from webhook\n   const input = $input.first().json.body;\n   \n   // Validate input\n   if (!input.red_fighter || !input.blue_fighter || !input.weight_class) {\n     throw new Error('Missing required fields: red_fighter, blue_fighter, weight_class');\n   }\n   \n   // Prepare request for Colab\n   return {\n     json: {\n       red_fighter: input.red_fighter,\n       blue_fighter: input.blue_fighter,\n       weight_class: input.weight_class,\n       title_bout: input.title_bout || false,\n       request_id: Date.now().toString()\n     }\n   };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "7d3ff775-4f2d-493a-8b24-24b6513e9226",
+      "name": "Prepare Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://monocultural-nondictatorially-gage.ngrok-free.dev/predict",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "865ba3f1-58bd-419d-a2c2-b3eaca620811",
+      "name": "Call Colab"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n   \n   if (!response.success) {\n     return {\n       json: {\n         success: false,\n         error: response.error\n       }\n     };\n   }\n   \n   return {\n     json: {\n       success: true,\n       fight: {\n         fighters: `${response.prediction.red_fighter} vs ${response.prediction.blue_fighter}`,\n         weight_class: response.prediction.weight_class,\n         predicted_winner: response.prediction.predicted_winner,\n         confidence: `${response.prediction.confidence}%`\n       },\n       probabilities: {\n         red_fighter: `${response.prediction.red_win_probability}%`,\n         blue_fighter: `${response.prediction.blue_win_probability}%`\n       },\n       fighter_stats: response.fighter_stats,\n       key_factors: response.key_factors\n     }\n   };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "96cde838-bd58-4de1-b2e8-3e3050665dcc",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "74bb3e00-bc85-4a25-b492-93565911379b",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## UFC Fight Prediction API"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -272,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "6fb7fd11-d3c2-40bd-a1d4-764c1046fc68",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Request": {
+      "main": [
+        [
+          {
+            "node": "Call Colab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Colab": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f0a17896-bbec-4be7-849a-4319e4c68c74",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "da6ec8d4a7b2ae206f89dfb49b443e33f0abb4d3d68f565928013841fc526be8"
+  },
+  "id": "bNih5nxqfTvJXyE7",
+  "tags": []
+}
